@@ -42,6 +42,12 @@ jobs:
             '{"contents":[{"parts":[{"text":"Analise este log de CI/CD e explique em 3 bullet points o que falhou e como corrigir:\n\n\($log)"}]}]}' \
             > payload.json
           echo "## Diagnóstico da IA" >> $GITHUB_STEP_SUMMARY
+
+          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "content-type: application/json" \
+            -d @payload.json
+
+
           curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
             -H "content-type: application/json" \
             -d @payload.json \
