@@ -43,12 +43,12 @@ jobs:
             > payload.json
           echo "## Diagnóstico da IA" >> $GITHUB_STEP_SUMMARY
 
-          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}" \
             -H "content-type: application/json" \
             -d @payload.json
 
 
-          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}" \
             -H "content-type: application/json" \
             -d @payload.json \
             | jq -r '.candidates[0].content.parts[0].text' >> $GITHUB_STEP_SUMMARY
