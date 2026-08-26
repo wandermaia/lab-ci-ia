@@ -9,10 +9,11 @@ def subtrair(a, b):
 def multiplicar(a, b):
     return a * b
 
-def dividir(a, b):
+def dividir(a, b, arredondar):
     if b == 0:
         raise ValueError("Divisão por zero não é permitida")
-    return a / b
+    resultado = a / b
+    return round(resultado) if arredondar else resultado
 
 def raiz_quadrada(n):
     if n < 0:
