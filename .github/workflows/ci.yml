@@ -1,0 +1,70 @@
+name: CI com Diagnóstico de IA
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Executar testes
+        id: run-tests
+        run: |
+          set -o pipefail
+          pytest --tb=short 2>&1 | tee test-results.log
+        continue-on-error: true
+
+      - name: Analisar falha com IA
+        if: steps.run-tests.outcome == 'failure'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          LOG=$(tail -100 test-results.log)
+          jq -n --arg log "$LOG" \
+            '{"contents":[{"parts":[{"text":"Analise este log de CI/CD e explique em 3 bullet points o que falhou e como corrigir:\n\n\($log)"}]}]}' \
+            > payload.json
+          echo "## Diagnóstico da IA" >> $GITHUB_STEP_SUMMARY
+          curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "content-type: application/json" \
+            -d @payload.json \
+            | jq -r '.candidates[0].content.parts[0].text' >> $GITHUB_STEP_SUMMARY
+
+      - name: Analisar PR com IA
+        if: github.event_name == 'pull_request'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin main
+          DIFF=$(git diff origin/main...HEAD -- '*.py')
+          jq -n --arg diff "$DIFF" \
+            '{"contents":[{"parts":[{"text":"Você é um revisor de código. Analise este diff de Python e aponte em até 5 bullet points melhorias de qualidade, boas práticas ou possíveis bugs. Seja direto e objetivo:\n\n\($diff)"}]}]}' \
+            > pr-payload.json
+          REVIEW=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "content-type: application/json" \
+            -d @pr-payload.json \
+            | jq -r '.candidates[0].content.parts[0].text')
+          BODY=$(printf "## Revisão automática de código (IA)\n\n%s" "$REVIEW")
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+
+      - name: Falhar o job após análise
+        if: steps.run-tests.outcome == 'failure'
+        run: exit 1
