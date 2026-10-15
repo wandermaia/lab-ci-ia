@@ -18,3 +18,6 @@ def raiz_quadrada(n):
     if n < 0:
         raise ValueError("Raiz de número negativo não é definida nos reais")
     return math.sqrt(n)
+
+def porcentagem(valor, percentual):
+    return valor * percentual / 100
